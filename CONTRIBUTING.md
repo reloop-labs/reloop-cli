@@ -31,6 +31,7 @@ CI runs the same five, and all five must pass.
 - **Never prompt in a non-interactive environment**, and never write anything but the requested data to stdout.
 - **Never log, print, or store an API key unmasked.**
 - Read [ARCHITECTURE.md](./ARCHITECTURE.md) before adding a resource — it has a step-by-step checklist.
+- Working with an AI assistant? [AGENTS.md](./AGENTS.md) is the machine-readable version of these rules, and `CLAUDE.md` / `GEMINI.md` point at it.
 
 ## Tests
 
