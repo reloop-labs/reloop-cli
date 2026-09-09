@@ -3,6 +3,8 @@ import { apiKeyEndpoints } from "@/api/endpoints";
 import type { ApiKeyListResponse } from "@/api/types";
 import { CliError, ExitCode, isCliError } from "@/errors/cli-error";
 
+const TRANSPORT_FAILURES = new Set(["network_error", "timeout"]);
+
 export type VerifyResult =
 	| { status: "valid"; keyName: string | null; userEmail: string | null }
 	| { status: "inconclusive"; reason: string };
@@ -22,7 +24,7 @@ export async function verifyApiKey(
 		if (isCliError(cause) && (cause.status === 401 || cause.status === 403)) {
 			throw invalidApiKey(client.endpoint);
 		}
-		if (isCliError(cause) && cause.status === undefined) {
+		if (isCliError(cause) && TRANSPORT_FAILURES.has(cause.code)) {
 			throw cause;
 		}
 		return {

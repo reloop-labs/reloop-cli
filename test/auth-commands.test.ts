@@ -62,7 +62,7 @@ function setup(
 describe("login", () => {
 	test("verifies the key and stores it against the given endpoint", async () => {
 		const { api, ctx } = setup(
-			[{ method: "GET", path: "/api/api-key/", body: keyListBody }],
+			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{ env: { RELOOP_API_KEY: API_KEY } },
 		);
 
@@ -81,7 +81,7 @@ describe("login", () => {
 
 	test("never echoes the raw key back to the caller", async () => {
 		const { ctx } = setup(
-			[{ method: "GET", path: "/api/api-key/", body: keyListBody }],
+			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{ env: { RELOOP_API_KEY: API_KEY } },
 		);
 
@@ -96,7 +96,7 @@ describe("login", () => {
 			[
 				{
 					method: "GET",
-					path: "/api/api-key/",
+					path: "/api/api-key/v1/",
 					status: 401,
 					body: { message: "Authentication required" },
 				},
@@ -130,7 +130,7 @@ describe("login", () => {
 			[
 				{
 					method: "GET",
-					path: "/api/api-key/",
+					path: "/api/api-key/v1/",
 					status: 503,
 					body: { message: "down" },
 				},
@@ -149,7 +149,7 @@ describe("login", () => {
 
 	test("reads the key from a hidden prompt on a terminal", async () => {
 		const { ctx } = setup(
-			[{ method: "GET", path: "/api/api-key/", body: keyListBody }],
+			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{ tty: true, answers: [API_KEY] },
 		);
 
@@ -183,7 +183,7 @@ describe("login", () => {
 describe("auth status", () => {
 	test("reports the resolved credential and its source", async () => {
 		const { ctx } = setup(
-			[{ method: "GET", path: "/api/api-key/", body: keyListBody }],
+			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{
 				env: { RELOOP_API_KEY: API_KEY },
 			},
@@ -212,7 +212,7 @@ describe("auth status", () => {
 describe("logout and profiles", () => {
 	test("clears the stored key but keeps the endpoint", async () => {
 		const { ctx: loginCtx } = setup(
-			[{ method: "GET", path: "/api/api-key/", body: keyListBody }],
+			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{ env: { RELOOP_API_KEY: API_KEY } },
 		);
 		await run(["login", "--endpoint", ENDPOINT, "--profile", "prod"], loginCtx);
@@ -228,7 +228,7 @@ describe("logout and profiles", () => {
 
 	test("lists profiles and marks the active one", async () => {
 		const { ctx: loginCtx } = setup(
-			[{ method: "GET", path: "/api/api-key/", body: keyListBody }],
+			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{ env: { RELOOP_API_KEY: API_KEY } },
 		);
 		await run(["login", "--endpoint", ENDPOINT, "--profile", "prod"], loginCtx);

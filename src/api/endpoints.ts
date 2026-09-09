@@ -9,5 +9,5 @@ export const contactEndpoints = {
 } as const;
 
 export const apiKeyEndpoints = {
-	list: "/api/api-key/",
+	list: "/api/api-key/v1/",
 } as const;
