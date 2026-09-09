@@ -9,8 +9,8 @@ import { createSession } from "@/cli/session";
 import type { Command, CommandInput } from "@/cli/spec";
 import {
 	asStatus,
-	CREATE_PROPERTY_KEY,
 	EMAIL_PATTERN,
+	PROPERTY_KEY,
 	parsePropertiesJson,
 	parsePropertyPairs,
 	propertiesFlag,
@@ -164,11 +164,11 @@ async function collectProperties(
 ): Promise<ContactProperties | undefined> {
 	const fromJson = parsePropertiesJson(
 		input.flags.str("properties"),
-		CREATE_PROPERTY_KEY,
+		PROPERTY_KEY,
 	);
 	const fromPairs = parsePropertyPairs(
 		input.flags.list("property"),
-		CREATE_PROPERTY_KEY,
+		PROPERTY_KEY,
 	);
 	const merged: ContactProperties = { ...fromJson, ...fromPairs };
 
@@ -185,7 +185,7 @@ async function collectProperties(
 		const key = await input.ctx.prompter.text({
 			message: "Property",
 			validate: (value) =>
-				CREATE_PROPERTY_KEY.test(value)
+				PROPERTY_KEY.test(value)
 					? undefined
 					: "Use lowercase letters, numbers, and underscores.",
 		});

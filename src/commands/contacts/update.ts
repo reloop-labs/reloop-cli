@@ -5,6 +5,7 @@ import {
 	asStatus,
 	assertPropertyKey,
 	contactArg,
+	PROPERTY_KEY,
 	parsePropertiesJson,
 	parsePropertyPairs,
 	propertiesFlag,
@@ -12,7 +13,6 @@ import {
 	renderContactDetail,
 	requireEmail,
 	statusFlag,
-	UPDATE_PROPERTY_KEY,
 } from "@/commands/contacts/shared";
 import { usageError } from "@/errors/cli-error";
 
@@ -76,15 +76,12 @@ export const updateContactCommand: Command = {
 
 		const replacement = parsePropertiesJson(
 			flags.str("properties"),
-			UPDATE_PROPERTY_KEY,
+			PROPERTY_KEY,
 		);
-		const additions = parsePropertyPairs(
-			flags.list("property"),
-			UPDATE_PROPERTY_KEY,
-		);
+		const additions = parsePropertyPairs(flags.list("property"), PROPERTY_KEY);
 		const removals = flags.list("unset-property");
 		for (const key of removals) {
-			assertPropertyKey(key, UPDATE_PROPERTY_KEY);
+			assertPropertyKey(key, PROPERTY_KEY);
 		}
 
 		const merging = Object.keys(additions).length > 0 || removals.length > 0;

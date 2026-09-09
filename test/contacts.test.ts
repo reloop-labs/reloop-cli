@@ -599,7 +599,36 @@ describe("contacts update", () => {
 		);
 	});
 
-	test("rejects property names the update endpoint cannot accept", async () => {
+	test("accepts digits in property names, as the API does", async () => {
+		const { api, ctx } = setup([
+			{
+				method: "GET",
+				path: "/api/contacts/retrieve/con_123",
+				body: contactFixture({ properties: {} }),
+			},
+			{
+				method: "PATCH",
+				path: "/api/contacts/con_123",
+				body: contactFixture({ event: "e" }),
+			},
+		]);
+
+		expect(
+			await run(
+				withEndpoint([
+					"contacts",
+					"update",
+					"con_123",
+					"--property",
+					"plan_2=pro",
+				]),
+				ctx,
+			),
+		).toBe(ExitCode.success);
+		expect(api.calls[1]?.body).toEqual({ properties: { plan_2: "pro" } });
+	});
+
+	test("rejects property names with unsupported characters", async () => {
 		const { ctx } = setup([]);
 		expect(
 			await run(
@@ -608,7 +637,7 @@ describe("contacts update", () => {
 					"update",
 					"con_123",
 					"--property",
-					"plan2=pro",
+					"Plan-X=pro",
 				]),
 				ctx,
 			),

@@ -6,8 +6,7 @@ import { renderTable } from "@/output/table";
 
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const CREATE_PROPERTY_KEY = /^[a-z0-9_]+$/;
-export const UPDATE_PROPERTY_KEY = /^[a-z_]+$/;
+export const PROPERTY_KEY = /^[a-z0-9_]+$/;
 
 export const contactArg = {
 	name: "contact",
@@ -113,12 +112,9 @@ export function assertPropertyKey(key: string, pattern: RegExp): void {
 	if (pattern.test(key)) {
 		return;
 	}
-	const digits = pattern === UPDATE_PROPERTY_KEY && /^[a-z0-9_]+$/.test(key);
 	throw usageError(`"${key}" is not a valid property name.`, {
 		code: "invalid_property",
-		fix: digits
-			? "The Reloop update endpoint only accepts lowercase letters and underscores in property names."
-			: "Property names must be lowercase letters, numbers, and underscores.",
+		fix: "Property names must be lowercase letters, numbers, and underscores.",
 	});
 }
 

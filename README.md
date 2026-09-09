@@ -266,7 +266,7 @@ Property semantics matter here, because the Reloop API replaces the whole proper
 
 The two forms cannot be combined.
 
-Note that the Reloop update endpoint only accepts property names made of lowercase letters and underscores, while the create endpoint also allows digits. The CLI validates against the right pattern for each and tells you which one applies.
+Property names must be lowercase letters, numbers, and underscores — the same rule the Reloop server enforces when it stores them.
 
 ### Delete
 
