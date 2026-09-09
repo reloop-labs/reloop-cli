@@ -47,7 +47,7 @@ Nothing in `api/`, `config/`, `auth/`, `output/`, or `errors/` imports from `com
 
 `CliContext` carries `stdout`, `stderr`, `env`, `fetch`, terminal state, and the prompter. `run(argv, ctx)` returns an exit code and never calls `process.exit`. That is what makes the whole CLI testable end to end without spawning a process or touching the network — `test/helpers.ts` builds a context with a captured stdout, a scripted prompter, and a routed mock `fetch`.
 
-`src/index.ts` is the only file that reads `process.*`.
+Outside `src/index.ts`, nothing reads `process.env` or `process.argv`, and nothing writes to `process.stdout` — that is what makes the CLI testable. Three files legitimately touch `process` for platform facts and real terminal I/O: `config/paths.ts` (`process.platform`), `config/store.ts` (`process.pid`, for the temp file name), and `prompts/node-prompter.ts`, which owns the real stdin/stderr for readline.
 
 ## Why the CLI has its own transport
 
