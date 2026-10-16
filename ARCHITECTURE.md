@@ -1,6 +1,6 @@
 # Architecture
 
-The CLI is a client of Reloop's public HTTP API. It never imports server code, never touches the database, and never assumes the Reloop monorepo is installed. Everything it needs is an endpoint and an API key.
+The CLI is a client of Reloop's public HTTP API. It never imports server code, never touches the database, and never assumes the Reloop monorepo is installed. Everything it needs is an endpoint and a credential: an API key, or an OAuth session from `reloop login`.
 
 ## Layers
 
@@ -8,7 +8,7 @@ The CLI is a client of Reloop's public HTTP API. It never imports server code, n
 src/
   index.ts              bin entry — the only file that touches process/globals
   cli/                  argv -> command -> exit code
-    context.ts            CliContext: stdout, stderr, env, fetch, terminal, prompter
+    context.ts            CliContext: stdout, stderr, env, fetch, terminal, prompter, browser, loopback, sleep
     spec.ts               Command / FlagSpec / ArgSpec, the declarative command model
     flags.ts              the flag parser and typed accessors
     globals.ts            global flags and their resolution
@@ -24,11 +24,12 @@ src/
     endpoints.ts          every path in one place
     types.ts              request/response contracts
     contacts.ts           the contacts resource
-  auth/                 credential + endpoint resolution and redaction
+  auth/                 credential + endpoint resolution, OAuth sign-in and refresh, redaction
   config/               config file location, reading, atomic writing
   output/               the only place that writes to stdout/stderr
   errors/               CliError, exit codes, API error mapping
   prompts/              readline-based prompter, and one that refuses to prompt
+  platform/             system browser opener and 127.0.0.1 callback server
 ```
 
 The rule that keeps this maintainable: **a command file parses intent, calls a resource, and hands data to `output`.** It does not build URLs, read the config file, format JSON, or decide whether the terminal is interactive.
@@ -45,9 +46,9 @@ Nothing in `api/`, `config/`, `auth/`, `output/`, or `errors/` imports from `com
 
 ## Everything is injected
 
-`CliContext` carries `stdout`, `stderr`, `env`, `fetch`, terminal state, and the prompter. `run(argv, ctx)` returns an exit code and never calls `process.exit`. That is what makes the whole CLI testable end to end without spawning a process or touching the network — `test/helpers.ts` builds a context with a captured stdout, a scripted prompter, and a routed mock `fetch`.
+`CliContext` carries `stdout`, `stderr`, `env`, `fetch`, terminal state, the prompter, the browser opener, the loopback listener, and `sleep`. `run(argv, ctx)` returns an exit code and never calls `process.exit`. That is what makes the whole CLI testable end to end without spawning a process or touching the network — `test/helpers.ts` builds a context with a captured stdout, a scripted prompter, and a routed mock `fetch`.
 
-Outside `src/index.ts`, nothing reads `process.env` or `process.argv`, and nothing writes to `process.stdout` — that is what makes the CLI testable. Three files legitimately touch `process` for platform facts and real terminal I/O: `config/paths.ts` (`process.platform`), `config/store.ts` (`process.pid`, for the temp file name), and `prompts/node-prompter.ts`, which owns the real stdin/stderr for readline.
+Outside `src/index.ts`, nothing reads `process.env` or `process.argv`, and nothing writes to `process.stdout` — that is what makes the CLI testable. A few files legitimately touch `process` for platform facts and real I/O: `config/paths.ts` (`process.platform`), `config/store.ts` (`process.pid`, for the temp file name), `prompts/node-prompter.ts`, which owns the real stdin/stderr for readline, and `platform/browser.ts` (`process.platform`, to pick the opener). `platform/loopback.ts` owns the real `127.0.0.1` callback server for browser sign-in.
 
 ## Why the CLI has its own transport
 

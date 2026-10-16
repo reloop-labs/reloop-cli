@@ -1,6 +1,8 @@
 import type { ReloopApiClient } from "@/api/client";
 import { apiKeyEndpoints } from "@/api/endpoints";
 import type { ApiKeyListResponse } from "@/api/types";
+import { sessionExpired } from "@/auth/oauth";
+import type { ResolvedCredential } from "@/auth/resolve";
 import { CliError, ExitCode, isCliError } from "@/errors/cli-error";
 
 const TRANSPORT_FAILURES = new Set(["network_error", "timeout"]);
@@ -8,6 +10,39 @@ const TRANSPORT_FAILURES = new Set(["network_error", "timeout"]);
 export type VerifyResult =
 	| { status: "valid"; keyName: string | null; userEmail: string | null }
 	| { status: "inconclusive"; reason: string };
+
+export async function verifyCredential(
+	client: ReloopApiClient,
+	credential: ResolvedCredential,
+): Promise<VerifyResult> {
+	if (credential.kind === "api_key") {
+		return verifyApiKey(client, credential.apiKey);
+	}
+	try {
+		await client.request<ApiKeyListResponse>({
+			method: "GET",
+			path: apiKeyEndpoints.list,
+			query: { limit: 1 },
+		});
+	} catch (cause) {
+		if (isCliError(cause) && (cause.status === 401 || cause.status === 403)) {
+			throw sessionExpired();
+		}
+		if (
+			isCliError(cause) &&
+			!TRANSPORT_FAILURES.has(cause.code) &&
+			cause.status !== undefined
+		) {
+			return { status: "inconclusive", reason: cause.message };
+		}
+		throw cause;
+	}
+	return {
+		status: "valid",
+		keyName: null,
+		userEmail: credential.grant.email ?? null,
+	};
+}
 
 export async function verifyApiKey(
 	client: ReloopApiClient,

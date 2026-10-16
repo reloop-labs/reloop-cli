@@ -147,15 +147,15 @@ describe("login", () => {
 		).toBe(API_KEY);
 	});
 
-	test("reads the key from a hidden prompt on a terminal", async () => {
+	test("reads the key from a hidden prompt with --with-api-key", async () => {
 		const { ctx } = setup(
 			[{ method: "GET", path: "/api/api-key/v1/", body: keyListBody }],
 			{ tty: true, answers: [API_KEY] },
 		);
 
-		expect(await run(["login", "--endpoint", ENDPOINT], ctx)).toBe(
-			ExitCode.success,
-		);
+		expect(
+			await run(["login", "--with-api-key", "--endpoint", ENDPOINT], ctx),
+		).toBe(ExitCode.success);
 		expect(
 			readConfig({ RELOOP_CONFIG_DIR: temp.dir }).profiles.default?.apiKey,
 		).toBe(API_KEY);
@@ -163,12 +163,23 @@ describe("login", () => {
 
 	test("fails with missing_api_key instead of prompting in a script", async () => {
 		const { ctx } = setup([]);
+		expect(
+			await run(["login", "--with-api-key", "--endpoint", ENDPOINT], ctx),
+		).toBe(ExitCode.usage);
+		expect(ctx.stderrJson<{ error: { code: string } }>().error.code).toBe(
+			"missing_api_key",
+		);
+	});
+
+	test("fails with missing_api_key instead of opening a browser in CI", async () => {
+		const { api, ctx } = setup([], { env: { CI: "true" } });
 		expect(await run(["login", "--endpoint", ENDPOINT], ctx)).toBe(
 			ExitCode.usage,
 		);
 		expect(ctx.stderrJson<{ error: { code: string } }>().error.code).toBe(
 			"missing_api_key",
 		);
+		expect(api.calls).toHaveLength(0);
 	});
 
 	test("rejects a malformed endpoint before touching the network", async () => {

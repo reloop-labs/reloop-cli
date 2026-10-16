@@ -55,7 +55,9 @@ describe("run", () => {
 			terminal: { stdinIsTty: true, stdoutIsTty: true, stderrIsTty: false },
 		});
 		expect(await run(["contacts", "list"], ctx)).toBe(ExitCode.auth);
-		expect(ctx.stderrText()).toContain("Error: No Reloop API key found.");
+		expect(ctx.stderrText()).toContain(
+			"Error: You are not signed in to Reloop.",
+		);
 		expect(ctx.stderrText()).not.toContain('"code"');
 	});
 

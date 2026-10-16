@@ -36,6 +36,20 @@ export type Prompter = {
 	confirm(prompt: ConfirmPrompt): Promise<boolean>;
 };
 
+export type Browser = {
+	open(url: string): Promise<boolean>;
+};
+
+export type CallbackServer = {
+	redirectUri: string;
+	result: Promise<URLSearchParams | undefined>;
+	close(): void;
+};
+
+export type Loopback = {
+	listen(path: string, timeoutMs: number): Promise<CallbackServer>;
+};
+
 export type CliContext = {
 	stdout: Writer;
 	stderr: Writer;
@@ -43,17 +57,26 @@ export type CliContext = {
 	fetch: FetchLike;
 	terminal: Terminal;
 	prompter: Prompter;
+	browser: Browser;
+	loopback: Loopback;
+	sleep(ms: number): Promise<void>;
 };
+
+export function isCi(env: Env): boolean {
+	const { CI, GITHUB_ACTIONS } = env;
+	return Boolean((CI && CI !== "false" && CI !== "0") || GITHUB_ACTIONS);
+}
+
+export function isRemoteShell(env: Env): boolean {
+	return Boolean(env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY);
+}
 
 export function isInteractive(ctx: CliContext): boolean {
 	if (!ctx.terminal.stdinIsTty || !ctx.terminal.stdoutIsTty) {
 		return false;
 	}
-	const { CI, GITHUB_ACTIONS, TERM, RELOOP_NO_PROMPT } = ctx.env;
-	if (CI && CI !== "false" && CI !== "0") {
-		return false;
-	}
-	if (GITHUB_ACTIONS) {
+	const { TERM, RELOOP_NO_PROMPT } = ctx.env;
+	if (isCi(ctx.env)) {
 		return false;
 	}
 	if (TERM === "dumb") {

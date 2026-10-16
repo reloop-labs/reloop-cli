@@ -56,6 +56,10 @@ export class Output {
 		this.#writeLine(this.#ctx.stderr, this.style.dim(text));
 	}
 
+	notice(text: string): void {
+		this.#writeLine(this.#ctx.stderr, text);
+	}
+
 	warn(text: string): void {
 		if (this.#quiet) {
 			return;

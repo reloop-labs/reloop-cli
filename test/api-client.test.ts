@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeEndpoint, ReloopApiClient } from "@/api/client";
+import { apiKeyCredential } from "@/auth/credential";
 import { CliError } from "@/errors/cli-error";
 import { USER_AGENT } from "@/version";
 import { API_KEY, ENDPOINT, mockApi } from "./helpers";
@@ -10,7 +11,7 @@ function client(
 ): ReloopApiClient {
 	return new ReloopApiClient({
 		endpoint: ENDPOINT,
-		apiKey: API_KEY,
+		credential: apiKeyCredential(API_KEY),
 		fetch: api.fetch,
 		timeoutMs: options.timeoutMs ?? 5_000,
 		...(options.debug ? { debug: options.debug } : {}),
@@ -118,7 +119,7 @@ describe("ReloopApiClient", () => {
 	test("turns transport failures into network errors", async () => {
 		const error = (await new ReloopApiClient({
 			endpoint: ENDPOINT,
-			apiKey: API_KEY,
+			credential: apiKeyCredential(API_KEY),
 			timeoutMs: 1_000,
 			fetch: () => Promise.reject(new Error("ECONNREFUSED")),
 		})
@@ -160,7 +161,7 @@ describe("ReloopApiClient", () => {
 	test("reports a non-JSON success body instead of crashing", async () => {
 		const error = (await new ReloopApiClient({
 			endpoint: ENDPOINT,
-			apiKey: API_KEY,
+			credential: apiKeyCredential(API_KEY),
 			timeoutMs: 1_000,
 			fetch: async () => new Response("<html>login</html>", { status: 200 }),
 		})

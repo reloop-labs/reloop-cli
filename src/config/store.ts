@@ -15,9 +15,20 @@ import { configError } from "@/errors/cli-error";
 export const DEFAULT_ENDPOINT = "https://reloop.sh";
 export const DEFAULT_PROFILE = "default";
 
+export type OAuthGrant = {
+	clientId: string;
+	resource: string;
+	accessToken: string;
+	refreshToken?: string;
+	expiresAt: number;
+	organizationId?: string;
+	email?: string;
+};
+
 export type Profile = {
 	endpoint: string;
 	apiKey?: string;
+	oauth?: OAuthGrant;
 };
 
 export type ConfigFile = {
@@ -43,7 +54,46 @@ function parseProfile(value: unknown): Profile | undefined {
 		typeof record.apiKey === "string" && record.apiKey.length > 0
 			? record.apiKey
 			: undefined;
-	return apiKey === undefined ? { endpoint } : { endpoint, apiKey };
+	const oauth = parseGrant(record.oauth);
+	return {
+		endpoint,
+		...(apiKey !== undefined ? { apiKey } : {}),
+		...(oauth !== undefined ? { oauth } : {}),
+	};
+}
+
+function optionalText(value: unknown): string | undefined {
+	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function parseGrant(value: unknown): OAuthGrant | undefined {
+	if (value === null || typeof value !== "object") {
+		return undefined;
+	}
+	const record = value as Record<string, unknown>;
+	const clientId = optionalText(record.clientId);
+	const resource = optionalText(record.resource);
+	const accessToken = optionalText(record.accessToken);
+	if (
+		!clientId ||
+		!resource ||
+		!accessToken ||
+		typeof record.expiresAt !== "number"
+	) {
+		return undefined;
+	}
+	const refreshToken = optionalText(record.refreshToken);
+	const organizationId = optionalText(record.organizationId);
+	const email = optionalText(record.email);
+	return {
+		clientId,
+		resource,
+		accessToken,
+		expiresAt: record.expiresAt,
+		...(refreshToken !== undefined ? { refreshToken } : {}),
+		...(organizationId !== undefined ? { organizationId } : {}),
+		...(email !== undefined ? { email } : {}),
+	};
 }
 
 export function readConfig(env: Env): ConfigFile {

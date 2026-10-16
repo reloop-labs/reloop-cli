@@ -11,7 +11,7 @@ export const authCommand: Command = {
 	name: "auth",
 	summary: "Manage credentials and profiles",
 	description:
-		"Credentials are resolved in this order: --api-key, then RELOOP_API_KEY, then the selected profile. Each profile stores its own endpoint, so Reloop Cloud and self-hosted installs can live side by side.",
+		"`reloop login` signs in with your browser, with no API key needed. Credentials are resolved in this order: --api-key, then RELOOP_API_KEY, then the selected profile's API key or browser sign-in. Each profile stores its own endpoint, so Reloop Cloud and self-hosted installs can live side by side.",
 	commands: [
 		loginCommand,
 		logoutCommand,

@@ -1,3 +1,4 @@
+import type { Credential } from "@/auth/credential";
 import type { FetchLike } from "@/cli/context";
 import {
 	type ApiErrorBody,
@@ -21,7 +22,7 @@ export type ApiRequest = {
 
 export type ApiClientOptions = {
 	endpoint: string;
-	apiKey: string;
+	credential: Credential;
 	fetch: FetchLike;
 	timeoutMs: number;
 	debug?: (line: string) => void;
@@ -61,23 +62,31 @@ function buildUrl(
 
 export class ReloopApiClient {
 	readonly endpoint: string;
-	readonly #apiKey: string;
+	readonly #credential: Credential;
 	readonly #fetch: FetchLike;
 	readonly #timeoutMs: number;
 	readonly #debug?: (line: string) => void;
 
 	constructor(options: ApiClientOptions) {
 		this.endpoint = normalizeEndpoint(options.endpoint);
-		this.#apiKey = options.apiKey;
+		this.#credential = options.credential;
 		this.#fetch = options.fetch;
 		this.#timeoutMs = options.timeoutMs;
 		this.#debug = options.debug;
 	}
 
 	async request<T>(spec: ApiRequest): Promise<T> {
+		const response = await this.#send(spec);
+		if (response.status === 401 && (await this.#credential.renew())) {
+			return this.#parse<T>(await this.#send(spec), spec);
+		}
+		return this.#parse<T>(response, spec);
+	}
+
+	async #send(spec: ApiRequest): Promise<Response> {
 		const url = buildUrl(this.endpoint, spec.path, spec.query);
 		const headers: Record<string, string> = {
-			"x-api-key": this.#apiKey,
+			...(await this.#credential.headers()),
 			accept: "application/json",
 			"user-agent": USER_AGENT,
 		};
@@ -113,7 +122,10 @@ export class ReloopApiClient {
 		}
 
 		this.#logResponse(response, Date.now() - startedAt);
+		return response;
+	}
 
+	async #parse<T>(response: Response, spec: ApiRequest): Promise<T> {
 		if (response.status === 204) {
 			return undefined as T;
 		}

@@ -16,7 +16,7 @@ Shipped today: `auth` (login, logout, status, list, use), `contacts` (list, crea
 2. **This CLI is an API client.** Never import server code, never touch Postgres, never assume the Reloop monorepo is checked out. A user installs this on a laptop and points it at a URL.
 3. **Zero runtime dependencies.** `package.json` has `devDependencies` only. If you think you need a runtime dep, stop and raise it first.
 4. **Never prompt when stdin or stdout is not a TTY.** `run.ts` swaps in a prompter that throws, so this is structural — do not work around it.
-5. **Never print, log, or store an API key unmasked.** Use `maskApiKey`. `--debug` prints request diagnostics and must never include the key.
+5. **Never print or log an API key or OAuth token unmasked.** Use `maskApiKey`. `--debug` prints request diagnostics and must never include a credential. Credentials are only ever written to the `0600` config file.
 6. **stdout carries only the requested data.** Hints, warnings, progress, prompts, and errors go to stderr.
 7. **Read the backend before writing a command.** `apps/backend/<service>/src/routes/**` in [reloop-labs/reloop](https://github.com/reloop-labs/reloop) defines the real paths and shapes. Do not infer a contract from the dashboard, from another provider's API, or from memory.
 8. **Ship only what was asked.** No speculative endpoints, no unused helpers, no flags "for later". Unused code is deleted in review.
@@ -45,14 +45,14 @@ argv
   -> commands/<resource>/<verb>.ts   read intent from flags/args
   -> cli/session.ts      read config, resolve credentials, build the API client
   -> api/<resource>.ts   typed method, one per endpoint
-  -> api/client.ts       URL, x-api-key, User-Agent, timeout, JSON, error mapping
+  -> api/client.ts       URL, credential headers, User-Agent, timeout, JSON, error mapping
   -> output/output.ts    human render or JSON, chosen once
   -> exit code
 ```
 
-`run(argv, ctx)` returns an exit code and never calls `process.exit`. `CliContext` carries `stdout`, `stderr`, `env`, `fetch`, terminal state, and the prompter, so the whole CLI runs in a test with no process and no network.
+`run(argv, ctx)` returns an exit code and never calls `process.exit`. `CliContext` carries `stdout`, `stderr`, `env`, `fetch`, terminal state, the prompter, the browser opener, the loopback listener, and `sleep`, so the whole CLI runs in a test with no process and no network.
 
-Outside `src/index.ts`, nothing reads `process.env` or `process.argv`, and nothing writes to `process.stdout` — that is what makes the CLI testable. Three files legitimately touch `process` for platform facts and real terminal I/O: `config/paths.ts` (`process.platform`), `config/store.ts` (`process.pid`, for the temp file name), and `prompts/node-prompter.ts`, which owns the real stdin/stderr for readline.
+Outside `src/index.ts`, nothing reads `process.env` or `process.argv`, and nothing writes to `process.stdout` — that is what makes the CLI testable. A few files legitimately touch `process` for platform facts and real I/O: `config/paths.ts` (`process.platform`), `config/store.ts` (`process.pid`, for the temp file name), `prompts/node-prompter.ts`, which owns the real stdin/stderr for readline, and `platform/browser.ts` (`process.platform`, to pick the opener). `platform/loopback.ts` owns the real `127.0.0.1` callback server for browser sign-in.
 
 A command file reads intent, calls a resource, hands data to `output`. It must not build URLs, read the config file, format JSON, or check TTY-ness itself.
 
@@ -69,6 +69,7 @@ src/
   output/         the only writer to stdout/stderr
   errors/         CliError, exit codes, HTTP error mapping
   prompts/        readline prompter, and one that refuses
+  platform/       system browser opener and loopback callback server, wired in index.ts
 ```
 
 Nothing in `api/`, `config/`, `auth/`, `output/`, or `errors/` may import from `commands/`. Only `cli/run.ts` knows the root registry.
@@ -76,7 +77,9 @@ Nothing in `api/`, `config/`, `auth/`, `output/`, or `errors/` may import from `
 ## The Reloop API, as verified against the backend
 
 - Base URL is a bare host. Each service mounts at `/api/<service>`. **Never hardcode `reloop.sh`** outside `DEFAULT_ENDPOINT` in `config/store.ts`.
-- Auth is the `x-api-key` header. Organization and team come from the key — there is no tenant to pass.
+- Auth is either the `x-api-key` header or `Authorization: Bearer <OAuth access token>`, chosen by `auth/credential.ts`. Organization and team come from the key or from the token's `org_id` claim, so there is no tenant to pass.
+- Browser sign-in uses the Better Auth OAuth server at `/api/auth/v1` (the same one MCP clients use). The CLI registers itself as a public native client through open dynamic registration, then runs authorization code + PKCE on `127.0.0.1`, or the RFC 8628 device grant with `--device`. Tokens are audience-bound to the resource returned at registration (`<endpoint>/mcp`), and `offline_access` is what makes the server issue a refresh token. Refreshes rotate the refresh token, so `OAuthCredential` always writes the new grant back to the profile.
+- A few routes are `authKey`- or `authSession`-only on the backend, and those reject OAuth tokens. Check the macro before relying on browser sign-in for a new command.
 - **A non-empty `User-Agent` is required** (`requireUserAgentPlugin`). `api/client.ts` sets it; do not bypass the client.
 - Errors are `{ message, why, fix, link }` with an HTTP status. `errors/api-error.ts` maps them; a resource can override the code per status.
 - Rate limits return `ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset`, `retry-after`.
@@ -86,7 +89,7 @@ Contacts specifics that already shaped this code — do not "fix" them without a
 - Contacts are addressed by **ID only**. `contacts.resolve()` turns an email into an ID via `list?search=` plus an exact client-side match.
 - `PATCH` **replaces the whole property set**. That is why `--property`/`--unset-property` read-modify-write and `--properties` is the raw replace, and why they cannot be combined.
 - Property keys are `^[a-z0-9_]+$` (`PROPERTY_KEY` in `commands/contacts/shared.ts`). The update endpoint's TypeBox schema advertises `^[a-z_]+$`, but that pattern is **not enforced at runtime** — verified against a live server, `PATCH` accepts `plan_2`. Match the server's real behaviour, not the advertised schema.
-- There is **no bulk create route** and **no whoami endpoint**. `auth status` validates by listing API keys and prefix-matching `start`.
+- There is **no bulk create route** and **no whoami endpoint**. `auth status` validates by listing API keys and prefix-matching `start`. For a browser sign-in, the user and organization come from the token claims captured at sign-in.
 - Pagination is offset-based, `limit` capped at 100.
 
 ## Output and exit codes

@@ -1,7 +1,14 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CliContext, Env, Prompter, Terminal } from "@/cli/context";
+import type {
+	Browser,
+	CliContext,
+	Env,
+	Loopback,
+	Prompter,
+	Terminal,
+} from "@/cli/context";
 
 export type RecordedCall = {
 	method: string;
@@ -44,7 +51,7 @@ export function mockApi(routes: Route[]): MockApi {
 				url,
 				headers,
 				...(typeof init?.body === "string"
-					? { body: JSON.parse(init.body) }
+					? { body: parseBody(init.body, headers["content-type"]) }
 					: {}),
 			});
 
@@ -80,6 +87,60 @@ export function mockApi(routes: Route[]): MockApi {
 	};
 }
 
+function parseBody(body: string, contentType: string | undefined): unknown {
+	if (contentType === "application/x-www-form-urlencoded") {
+		return Object.fromEntries(new URLSearchParams(body));
+	}
+	return JSON.parse(body);
+}
+
+export type FakeBrowser = Browser & { opened: string[] };
+
+export function fakeBrowser(
+	onOpen?: (url: string) => void,
+	opens = true,
+): FakeBrowser {
+	const opened: string[] = [];
+	return {
+		opened,
+		async open(url) {
+			opened.push(url);
+			onOpen?.(url);
+			return opens;
+		},
+	};
+}
+
+export type FakeLoopback = Loopback & {
+	respond(params: Record<string, string> | undefined): void;
+	closed: boolean;
+};
+
+export const REDIRECT_URI = "http://127.0.0.1:53682/callback";
+
+export function fakeLoopback(): FakeLoopback {
+	let settle: (params: URLSearchParams | undefined) => void = () => {};
+	const result = new Promise<URLSearchParams | undefined>((done) => {
+		settle = done;
+	});
+	const loopback: FakeLoopback = {
+		closed: false,
+		respond(params) {
+			settle(params ? new URLSearchParams(params) : undefined);
+		},
+		async listen() {
+			return {
+				redirectUri: REDIRECT_URI,
+				result,
+				close() {
+					loopback.closed = true;
+				},
+			};
+		},
+	};
+	return loopback;
+}
+
 export function scriptedPrompter(answers: Array<string | boolean>): Prompter {
 	const queue = [...answers];
 	const next = (kind: string): string | boolean => {
@@ -108,6 +169,8 @@ export function createTestContext(
 		fetch?: CliContext["fetch"];
 		terminal?: Partial<Terminal>;
 		prompter?: Prompter;
+		browser?: Browser;
+		loopback?: Loopback;
 	} = {},
 ): TestContext {
 	let out = "";
@@ -139,6 +202,15 @@ export function createTestContext(
 			}),
 		terminal,
 		prompter: options.prompter ?? scriptedPrompter([]),
+		browser: options.browser ?? fakeBrowser(),
+		loopback:
+			options.loopback ??
+			({
+				listen: () => {
+					throw new Error("loopback was not expected in this test");
+				},
+			} satisfies Loopback),
+		sleep: async () => {},
 		stdoutText: () => out,
 		stderrText: () => err,
 		stdoutJson: <T>() => JSON.parse(out) as T,

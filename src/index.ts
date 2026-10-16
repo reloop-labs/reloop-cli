@@ -1,4 +1,6 @@
 import { run } from "@/cli/run";
+import { systemBrowser } from "@/platform/browser";
+import { loopbackListener } from "@/platform/loopback";
 import { nodePrompter } from "@/prompts/node-prompter";
 
 const exitCode = await run(process.argv.slice(2), {
@@ -15,6 +17,9 @@ const exitCode = await run(process.argv.slice(2), {
 			: {}),
 	},
 	prompter: nodePrompter,
+	browser: systemBrowser,
+	loopback: loopbackListener,
+	sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 });
 
 process.exitCode = exitCode;

@@ -89,8 +89,11 @@ describe("credential resolution", () => {
 			{ RELOOP_API_KEY: "rl_prod_env" },
 			config,
 		);
-		expect(auth.apiKey).toBe("rl_prod_flag");
-		expect(auth.apiKeySource).toBe("flag");
+		expect(auth.credential).toMatchObject({
+			kind: "api_key",
+			apiKey: "rl_prod_flag",
+		});
+		expect(auth.credential.source).toBe("flag");
 	});
 
 	test("prefers the environment over the stored profile", () => {
@@ -99,20 +102,29 @@ describe("credential resolution", () => {
 			{ RELOOP_API_KEY: "rl_prod_env" },
 			config,
 		);
-		expect(auth.apiKey).toBe("rl_prod_env");
-		expect(auth.apiKeySource).toBe("environment");
+		expect(auth.credential).toMatchObject({
+			kind: "api_key",
+			apiKey: "rl_prod_env",
+		});
+		expect(auth.credential.source).toBe("environment");
 	});
 
 	test("falls back to the active profile", () => {
 		const auth = resolveAuth(globals(), {}, config);
-		expect(auth.apiKey).toBe("rl_prod_stored");
+		expect(auth.credential).toMatchObject({
+			kind: "api_key",
+			apiKey: "rl_prod_stored",
+		});
 		expect(auth.profileName).toBe("prod");
 		expect(auth.endpoint).toBe("https://mail.example.com");
 	});
 
 	test("--profile selects a different stored endpoint and key", () => {
 		const auth = resolveAuth(globals({ profile: "local" }), {}, config);
-		expect(auth.apiKey).toBe("rl_prod_local");
+		expect(auth.credential).toMatchObject({
+			kind: "api_key",
+			apiKey: "rl_prod_local",
+		});
 		expect(auth.endpoint).toBe("http://localhost:8014");
 	});
 

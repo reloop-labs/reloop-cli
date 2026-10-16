@@ -20,6 +20,11 @@ export const listProfilesCommand: Command = {
 			endpoint: profile.endpoint,
 			active: name === active,
 			hasApiKey: profile.apiKey !== undefined,
+			credential: profile.apiKey
+				? ("api_key" as const)
+				: profile.oauth
+					? ("oauth" as const)
+					: null,
 		}));
 
 		output.emit({
@@ -40,7 +45,11 @@ export const listProfilesCommand: Command = {
 						{
 							header: "credential",
 							values: value.profiles.map((p) =>
-								p.hasApiKey ? "stored" : "none",
+								p.credential === "api_key"
+									? "api key"
+									: p.credential === "oauth"
+										? "browser"
+										: "none",
 							),
 						},
 						{

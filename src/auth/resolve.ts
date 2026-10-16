@@ -4,6 +4,7 @@ import {
 	type ConfigFile,
 	DEFAULT_ENDPOINT,
 	DEFAULT_PROFILE,
+	type OAuthGrant,
 	type Profile,
 } from "@/config/store";
 import { CliError, ExitCode, usageError } from "@/errors/cli-error";
@@ -17,9 +18,16 @@ export type ResolvedTarget = {
 	profileExists: boolean;
 };
 
+export type ResolvedCredential =
+	| {
+			kind: "api_key";
+			apiKey: string;
+			source: Exclude<ValueSource, "default">;
+	  }
+	| { kind: "oauth"; grant: OAuthGrant; source: "profile" };
+
 export type ResolvedAuth = ResolvedTarget & {
-	apiKey: string;
-	apiKeySource: Exclude<ValueSource, "default">;
+	credential: ResolvedCredential;
 };
 
 export function validateEndpoint(endpoint: string): string {
@@ -134,15 +142,25 @@ export function resolveAuth(
 	for (const candidate of candidates) {
 		const apiKey = candidate.value?.trim();
 		if (apiKey) {
-			return { ...target, apiKey, apiKeySource: candidate.source };
+			return {
+				...target,
+				credential: { kind: "api_key", apiKey, source: candidate.source },
+			};
 		}
+	}
+
+	if (profile?.oauth && profile.endpoint === target.endpoint) {
+		return {
+			...target,
+			credential: { kind: "oauth", grant: profile.oauth, source: "profile" },
+		};
 	}
 
 	throw new CliError({
 		code: "not_authenticated",
-		message: "No Reloop API key found.",
+		message: "You are not signed in to Reloop.",
 		exitCode: ExitCode.auth,
 		why: `Checked --api-key, RELOOP_API_KEY, and the "${target.profileName}" profile.`,
-		fix: "Run `reloop login`, or pass --api-key, or set RELOOP_API_KEY.",
+		fix: "Run `reloop login` to sign in with your browser, or pass --api-key, or set RELOOP_API_KEY.",
 	});
 }

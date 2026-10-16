@@ -20,7 +20,7 @@ These are two different products and they do not overlap.
 |---|---|---|
 | Binary | `reloop` | `reloop-tools` |
 | Talks to | Your Reloop account — Cloud or self-hosted | Public Reloop Tools endpoints |
-| Needs an API key | Yes | No |
+| Needs to sign in | Yes — browser sign-in or an API key | No |
 | Purpose | Operate the platform: contacts, and in time every resource the dashboard exposes | Standalone developer utilities, e.g. disposable-address checks |
 | Example | `reloop contacts list` | `reloop-tools check user@example.com` |
 
@@ -47,13 +47,29 @@ Requires Node.js 20 or newer.
 
 ## Authentication
 
-Create an API key in your Reloop dashboard under **API keys**, then:
-
 ```bash
 reloop login
 ```
 
-The key is verified against the endpoint before anything is written to disk, and it is stored with `0600` permissions. Nothing ever prints your key back to you — output is masked to a short prefix.
+Your browser opens on Reloop, you pick an organization and approve the CLI, and you're done. You don't create or copy an API key. This is the same OAuth flow MCP clients use: PKCE plus a one-time redirect to `127.0.0.1`. The CLI stores a short-lived access token and a refresh token, refreshes it on its own, and `reloop logout` revokes it. You can review or revoke the CLI any time under **Settings → Connected Apps**.
+
+On a remote machine, or anywhere the browser can't reach this one, sign in with a code instead:
+
+```bash
+reloop login --device
+```
+
+It prints a link and a one-time code to confirm from any browser. Over SSH this happens automatically.
+
+API keys still work everywhere:
+
+```bash
+reloop login --with-api-key
+reloop login --api-key rl_prod_...
+RELOOP_API_KEY=rl_prod_... reloop login
+```
+
+A key is verified against the endpoint before anything is written to disk. Credentials are stored with `0600` permissions, and nothing ever prints them back to you; keys are masked to a short prefix.
 
 ### Credential precedence
 
@@ -61,7 +77,7 @@ Every command resolves its credential in this order, and stops at the first hit:
 
 1. `--api-key <key>`
 2. `RELOOP_API_KEY`
-3. the selected profile in the config file
+3. the selected profile in the config file: its API key, or its browser sign-in
 
 The endpoint is resolved the same way:
 
@@ -102,7 +118,7 @@ reloop auth use production
 reloop auth list
 ```
 
-A profile holds a name, an endpoint, and a credential. The organization and team context come from the API key itself, so there is nothing else to configure.
+A profile holds a name, an endpoint, and a credential. The organization comes from the API key, or from the organization you approved at sign-in, so there is nothing else to configure.
 
 For a one-off call against a host you do not want to store:
 
@@ -355,7 +371,7 @@ else
 fi
 ```
 
-In CI, set `RELOOP_API_KEY` (and `RELOOP_ENDPOINT` if you self-host) as secrets and skip `reloop login` entirely.
+In CI, set `RELOOP_API_KEY` (and `RELOOP_ENDPOINT` if you self-host) as secrets and skip `reloop login` entirely. When `CI` is set, `reloop login` never opens a browser.
 
 ---
 
