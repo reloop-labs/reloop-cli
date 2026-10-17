@@ -163,7 +163,7 @@ describe("login with the browser", () => {
 			}),
 		});
 		expect(loopback.closed).toBe(true);
-		expect(ctx.stdoutJson()).toEqual({
+		expect(ctx.stdoutJson<Record<string, unknown>>()).toEqual({
 			object: "profile",
 			profile: "default",
 			endpoint: ENDPOINT,
