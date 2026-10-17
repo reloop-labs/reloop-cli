@@ -295,6 +295,24 @@ In a terminal you get a confirmation prompt. In a script `--yes` is required —
 
 ---
 
+## Webhooks
+
+### Listen
+
+Forward webhook test events to a server on your machine. You don't need a public URL or ngrok:
+
+```bash
+reloop webhooks listen --forward-to localhost:3000/webhooks
+```
+
+Then open a webhook's **Test** page in the dashboard, pick the **Local listener** target, and send an event. Each request is signed with that webhook's secret and POSTed to `--forward-to`. Your server's status and response body go back to the dashboard.
+
+```
+14:02:11  email.sent  →  POST http://localhost:3000/webhooks  [200]  12ms
+```
+
+`--forward-to` accepts a full URL, `host:port/path`, or a bare port. With `--json`, the CLI prints one JSON object per event. The CLI reconnects on its own if the connection drops. Press Ctrl-C to stop.
+
 ## For AI agents and automation
 
 - `reloop commands` prints the entire command tree as JSON — every subcommand, alias, argument, flag, default, and error code. It always emits JSON, in a terminal or not.

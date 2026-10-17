@@ -83,11 +83,30 @@ export class ReloopApiClient {
 		return this.#parse<T>(response, spec);
 	}
 
-	async #send(spec: ApiRequest): Promise<Response> {
+	/**
+	 * Open a long-lived response (server-sent events). No request timeout
+	 * applies; the caller ends it through `signal`. Non-2xx responses throw.
+	 */
+	async stream(spec: ApiRequest, signal: AbortSignal): Promise<Response> {
+		const options = { accept: "text/event-stream", signal };
+		let response = await this.#send(spec, options);
+		if (response.status === 401 && (await this.#credential.renew())) {
+			response = await this.#send(spec, options);
+		}
+		if (!response.ok) {
+			await this.#parse(response, spec);
+		}
+		return response;
+	}
+
+	async #send(
+		spec: ApiRequest,
+		options: { accept?: string; signal?: AbortSignal } = {},
+	): Promise<Response> {
 		const url = buildUrl(this.endpoint, spec.path, spec.query);
 		const headers: Record<string, string> = {
 			...(await this.#credential.headers()),
-			accept: "application/json",
+			accept: options.accept ?? "application/json",
 			"user-agent": USER_AGENT,
 		};
 		if (spec.body !== undefined) {
@@ -96,10 +115,13 @@ export class ReloopApiClient {
 
 		const controller = new AbortController();
 		let timedOut = false;
-		const timer = setTimeout(() => {
-			timedOut = true;
-			controller.abort();
-		}, this.#timeoutMs);
+		// Streams are ended by the caller's signal instead of a timeout.
+		const timer = options.signal
+			? undefined
+			: setTimeout(() => {
+					timedOut = true;
+					controller.abort();
+				}, this.#timeoutMs);
 		const startedAt = Date.now();
 
 		this.#debug?.(`${spec.method} ${url}`);
@@ -109,7 +131,7 @@ export class ReloopApiClient {
 			response = await this.#fetch(url, {
 				method: spec.method,
 				headers,
-				signal: controller.signal,
+				signal: options.signal ?? controller.signal,
 				...(spec.body !== undefined ? { body: JSON.stringify(spec.body) } : {}),
 			});
 		} catch (cause) {

@@ -4,6 +4,7 @@ import { loginCommand } from "@/commands/auth/login";
 import { logoutCommand } from "@/commands/auth/logout";
 import { commandsCommand } from "@/commands/commands";
 import { contactsCommand } from "@/commands/contacts/index";
+import { webhooksCommand } from "@/commands/webhooks/index";
 import { BIN_NAME } from "@/version";
 
 export const rootCommand: Command = {
@@ -24,6 +25,7 @@ export const rootCommand: Command = {
 		loginCommand,
 		logoutCommand,
 		contactsCommand,
+		webhooksCommand,
 		commandsCommand,
 	],
 	examples: [
@@ -31,5 +33,6 @@ export const rootCommand: Command = {
 		"reloop contacts list",
 		"reloop contacts create --email luna@example.com --first-name Luna",
 		"reloop contacts list --json | jq -r '.contacts[].email'",
+		"reloop webhooks listen --forward-to localhost:3000/webhooks",
 	],
 };

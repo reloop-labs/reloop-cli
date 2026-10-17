@@ -60,6 +60,8 @@ export type CliContext = {
 	browser: Browser;
 	loopback: Loopback;
 	sleep(ms: number): Promise<void>;
+	/** A signal that aborts on Ctrl-C, for long-running commands. Registered on first call. */
+	interrupt?: () => AbortSignal;
 };
 
 export function isCi(env: Env): boolean {

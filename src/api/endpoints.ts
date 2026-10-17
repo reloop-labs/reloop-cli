@@ -21,3 +21,11 @@ export const oauthEndpoints = {
 	revoke: `${AUTH_BASE}/oauth2/revoke`,
 	deviceCode: `${AUTH_BASE}/device/code`,
 } as const;
+
+const WEBHOOK_BASE = "/api/webhook/v1";
+
+export const webhookEndpoints = {
+	listenStream: `${WEBHOOK_BASE}/listen/stream`,
+	listenResult: (sessionId: string) =>
+		`${WEBHOOK_BASE}/listen/sessions/${encodeURIComponent(sessionId)}/results`,
+} as const;

@@ -1,5 +1,6 @@
 import { ReloopApiClient } from "@/api/client";
 import { ContactsApi } from "@/api/contacts";
+import { WebhooksApi } from "@/api/webhooks";
 import {
 	apiKeyCredential,
 	type Credential,
@@ -15,6 +16,7 @@ export type Session = {
 	config: ConfigFile;
 	client: ReloopApiClient;
 	contacts: ContactsApi;
+	webhooks: WebhooksApi;
 };
 
 export function debugSink(
@@ -81,7 +83,13 @@ export function createSession(input: CommandInput): Session {
 	const auth = resolveAuth(input.globals, input.ctx.env, config);
 	const client = createClient(input, auth.endpoint, credentialFor(input, auth));
 
-	return { auth, config, client, contacts: new ContactsApi(client) };
+	return {
+		auth,
+		config,
+		client,
+		contacts: new ContactsApi(client),
+		webhooks: new WebhooksApi(client),
+	};
 }
 
 export function readTarget(input: CommandInput) {

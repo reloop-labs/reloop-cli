@@ -118,3 +118,27 @@ export const CHANNEL_SUBSCRIPTIONS: readonly ChannelSubscription[] = [
 	"opt_in",
 	"opt_out",
 ];
+
+/** SSE `ready` event from GET /api/webhook/v1/listen/stream. */
+export type ListenReady = {
+	sessionId: string;
+	heartbeatMs: number;
+};
+
+/** SSE `webhook` event: a signed request to forward. */
+export type ListenDelivery = {
+	deliveryId: string;
+	eventId: string;
+	eventType: string;
+	headers: Record<string, string>;
+	rawBody: string;
+};
+
+/** Body of POST /api/webhook/v1/listen/sessions/:id/results. */
+export type ListenResult = {
+	deliveryId: string;
+	status: number | null;
+	body: string | null;
+	durationMs: number;
+	error: string | null;
+};

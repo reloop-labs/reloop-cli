@@ -20,6 +20,12 @@ const exitCode = await run(process.argv.slice(2), {
 	browser: systemBrowser,
 	loopback: loopbackListener,
 	sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+	interrupt: () => {
+		const controller = new AbortController();
+		// once: a second Ctrl-C falls through to the default and kills the process.
+		process.once("SIGINT", () => controller.abort());
+		return controller.signal;
+	},
 });
 
 process.exitCode = exitCode;
